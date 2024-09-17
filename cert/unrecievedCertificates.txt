@@ -1,0 +1,15 @@
+Unreceived certificates
+
+1 - quantum computing full
+
+2 - DSA
+
+3 - python
+
+4 - linux
+
+5 - kubernetes
+
+6 - javascript
+
+Portfolio - add two main certificates arth, redhat on top and rest below 
