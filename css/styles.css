@@ -3998,10 +3998,7 @@ td:last-child {
     object-fit: contain;
 }
 
-.certificate-icon i {
-    font-size: 50px;
-    color: red; /* You can change the color to match your theme */
-}
+
 
 .s-projects {
     padding: 6rem 0;
