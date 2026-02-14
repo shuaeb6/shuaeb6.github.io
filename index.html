@@ -1,940 +1,521 @@
 <!DOCTYPE html>
-<html lang="en" class="no-js" >
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHOEB.EXE — System Initialized</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;500;600;700;800;900&family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --black:#000;--bg:#050505;--surface:#0a0a0a;--surface2:#111;
+  --white:#e8e8e8;--dim:#666;--muted:#333;
+  --neon:#39ff14;--neon-dim:rgba(57,255,20,.15);--neon-glow:rgba(57,255,20,.4);
+  --red:#ff1744;--red-dim:rgba(255,23,68,.15);--red-glow:rgba(255,23,68,.4);
+  --cyan:#00e5ff;--cyan-dim:rgba(0,229,255,.1);
+  --amber:#ffab00;
+}
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Mono',monospace;background:var(--black);color:var(--white);overflow-x:hidden;cursor:crosshair}
+::selection{background:var(--neon);color:var(--black)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:var(--black)}::-webkit-scrollbar-thumb{background:var(--neon);border-radius:0}
 
-    <!--- basic page needs
-    ================================================== -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Shoeb</title>
+/* ===== SCANLINES ===== */
+body::after{content:'';position:fixed;inset:0;z-index:99997;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px)}
+/* CRT vignette */
+body::before{content:'';position:fixed;inset:0;z-index:99996;pointer-events:none;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.5) 100%)}
 
-    <script>
-        document.documentElement.classList.remove('no-js');
-        document.documentElement.classList.add('js');
-    </script>
+/* ===== LOADER — BOOT SEQUENCE ===== */
+#loader{position:fixed;inset:0;z-index:100000;background:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Share Tech Mono',monospace;transition:opacity .6s,visibility .6s}
+#loader.done{opacity:0;visibility:hidden;pointer-events:none}
+.boot-text{font-size:.8rem;color:var(--neon);text-align:left;max-width:500px;width:90%}
+.boot-text .line{opacity:0;transform:translateX(-10px);animation:bootIn .3s forwards}
+@keyframes bootIn{to{opacity:1;transform:translateX(0)}}
+.boot-bar{width:90%;max-width:500px;height:2px;background:var(--muted);margin-top:1.5rem;position:relative}
+.boot-bar-inner{height:100%;width:0;background:var(--neon);box-shadow:0 0 10px var(--neon-glow);animation:bootFill 2.5s .8s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes bootFill{to{width:100%}}
+.boot-status{font-family:'Share Tech Mono',monospace;font-size:.6rem;color:var(--dim);margin-top:.8rem;letter-spacing:2px;text-transform:uppercase;opacity:0;animation:fadeIn .3s 2.5s forwards}
+@keyframes fadeIn{to{opacity:1}}
 
-    <!-- CSS
-    ================================================== -->
-    <link rel="stylesheet" href="css/vendor.css">
-    <link rel="stylesheet" href="css/styles.css">
+/* ===== GLITCH ===== */
+@keyframes glitch1{0%,100%{clip-path:inset(0 0 95% 0)}20%{clip-path:inset(30% 0 40% 0)}40%{clip-path:inset(70% 0 5% 0)}60%{clip-path:inset(10% 0 80% 0)}80%{clip-path:inset(50% 0 20% 0)}}
+@keyframes glitch2{0%,100%{clip-path:inset(95% 0 0 0)}20%{clip-path:inset(20% 0 60% 0)}40%{clip-path:inset(55% 0 25% 0)}60%{clip-path:inset(80% 0 5% 0)}80%{clip-path:inset(5% 0 70% 0)}}
+.glitch{position:relative}
+.glitch::before,.glitch::after{content:attr(data-text);position:absolute;inset:0;overflow:hidden}
+.glitch::before{color:var(--cyan);animation:glitch1 3s infinite linear alternate-reverse;left:2px}
+.glitch::after{color:var(--red);animation:glitch2 3s infinite linear alternate-reverse;left:-2px}
+.glitch:hover::before,.glitch:hover::after{animation-duration:.5s}
 
-    <!-- favicons
-    ================================================== -->
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-    <link rel="manifest" href="site.webmanifest">
+/* ===== 3D CANVAS ===== */
+#bg3d{position:fixed;inset:0;z-index:0;pointer-events:none}
 
+/* ===== TICKER / MARQUEE ===== */
+.ticker{overflow:hidden;padding:.6rem 0;border-top:1px solid var(--muted);border-bottom:1px solid var(--muted);position:relative;z-index:2}
+.ticker-track{display:flex;gap:2rem;animation:tick 20s linear infinite;white-space:nowrap}
+.ticker-track span{font-family:'Share Tech Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:3px;flex-shrink:0;color:var(--dim)}
+.ticker-track span.sep{color:var(--neon)}
+.ticker.red .ticker-track span.sep{color:var(--red)}
+@keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ===== NAV ===== */
+nav{position:fixed;top:0;left:0;right:0;z-index:9000;padding:1rem 2.5rem;display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.6);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--muted);transition:all .3s}
+.nav-sys{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:3px;color:var(--neon);text-shadow:0 0 10px var(--neon-glow)}
+.nav-sys span{color:var(--white)}
+.nav-links{display:flex;gap:2rem;list-style:none}
+.nav-links a{font-family:'Share Tech Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--dim);text-decoration:none;position:relative;transition:color .3s}
+.nav-links a::before{content:'>';color:var(--neon);margin-right:.4rem;opacity:0;transition:opacity .3s}
+.nav-links a:hover{color:var(--neon)}.nav-links a:hover::before{opacity:1}
+
+/* Toggle switch */
+.toggle-wrap{display:flex;align-items:center;gap:.8rem}
+.toggle-label{font-family:'Share Tech Mono',monospace;font-size:.55rem;text-transform:uppercase;letter-spacing:2px}
+.toggle-label.on{color:var(--neon)}.toggle-label.off{color:var(--red)}
+.toggle{width:40px;height:20px;background:var(--surface2);border:1px solid var(--muted);border-radius:0;cursor:pointer;position:relative;transition:all .3s}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;background:var(--neon);box-shadow:0 0 8px var(--neon-glow);transition:all .3s}
+.toggle.off::after{left:calc(100% - 16px);background:var(--red);box-shadow:0 0 8px var(--red-glow)}
+
+.ham{display:none;background:none;border:1px solid var(--muted);padding:.4rem .6rem;cursor:pointer}
+.ham span{display:block;width:18px;height:1px;background:var(--neon);margin:4px 0}
+
+/* ===== HERO ===== */
+.hero{min-height:100vh;display:flex;align-items:center;position:relative;z-index:2;padding:8rem 2.5rem 4rem;overflow:hidden}
+.hero-inner{width:100%;max-width:1200px;margin:0 auto;position:relative}
+
+/* HUD overlay corners */
+.hud-corner{position:absolute;width:40px;height:40px;z-index:5}
+.hud-corner::before,.hud-corner::after{content:'';position:absolute;background:var(--neon)}
+.hud-tl{top:0;left:0}.hud-tl::before{top:0;left:0;width:20px;height:1px}.hud-tl::after{top:0;left:0;width:1px;height:20px}
+.hud-tr{top:0;right:0}.hud-tr::before{top:0;right:0;width:20px;height:1px}.hud-tr::after{top:0;right:0;width:1px;height:20px}
+.hud-bl{bottom:0;left:0}.hud-bl::before{bottom:0;left:0;width:20px;height:1px}.hud-bl::after{bottom:0;left:0;width:1px;height:20px}
+.hud-br{bottom:0;right:0}.hud-br::before{bottom:0;right:0;width:20px;height:1px}.hud-br::after{bottom:0;right:0;width:1px;height:20px}
+
+.hero-tag{font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:4px;text-transform:uppercase;color:var(--neon);margin-bottom:1.5rem;opacity:0;animation:su .8s 3s forwards}
+.hero-tag::before{content:'[ ';color:var(--dim)}.hero-tag::after{content:' ]';color:var(--dim)}
+@keyframes su{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.hero-title{font-family:'Orbitron',sans-serif;font-size:clamp(2.5rem,7vw,6rem);font-weight:900;letter-spacing:-1px;line-height:1;margin-bottom:.5rem;text-transform:uppercase}
+.hero-title .ln{display:block;overflow:hidden}
+.hero-title .ln span{display:inline-block;opacity:0;transform:translateY(110%);animation:wu 1s cubic-bezier(.16,1,.3,1) forwards}
+.hero-title .ln:nth-child(1) span{animation-delay:2.8s}
+.hero-title .ln:nth-child(2) span{animation-delay:2.95s}
+.hero-title .ln:nth-child(3) span{animation-delay:3.1s}
+@keyframes wu{to{opacity:1;transform:translateY(0)}}
+.hero-title .exe{color:var(--neon);text-shadow:0 0 20px var(--neon-glow),0 0 40px var(--neon-dim)}
+
+.hero-sub{font-family:'Share Tech Mono',monospace;font-size:.75rem;color:var(--dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:2rem;opacity:0;animation:su .8s 3.3s forwards}
+.hero-desc{font-size:.9rem;color:var(--dim);max-width:500px;line-height:1.8;margin-bottom:2.5rem;opacity:0;animation:su .8s 3.5s forwards}
+
+.hero-btns{display:flex;gap:1rem;opacity:0;animation:su .8s 3.7s forwards}
+.btn-exe{font-family:'Share Tech Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:2px;padding:1rem 2.2rem;background:var(--neon);color:var(--black);border:none;cursor:pointer;position:relative;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));transition:all .3s;font-weight:700;box-shadow:0 0 20px var(--neon-dim)}
+.btn-exe:hover{box-shadow:0 0 30px var(--neon-glow),0 0 60px var(--neon-dim);transform:translateY(-2px)}
+.btn-term{font-family:'Share Tech Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:2px;padding:1rem 2.2rem;background:transparent;color:var(--white);border:1px solid var(--muted);cursor:pointer;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));transition:all .3s}
+.btn-term:hover{border-color:var(--neon);color:var(--neon)}
+
+/* Hero HUD data */
+.hud-data{position:absolute;right:0;top:50%;transform:translateY(-50%);text-align:right;opacity:0;animation:su 1s 3.2s forwards}
+.hud-line{font-family:'Share Tech Mono',monospace;font-size:.55rem;color:var(--dim);letter-spacing:2px;margin-bottom:.5rem;text-transform:uppercase}
+.hud-line .val{color:var(--neon)}
+.hud-line .red{color:var(--red)}
+
+/* Coord display */
+.coords{position:absolute;bottom:2rem;right:2.5rem;font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:2px;z-index:2;opacity:0;animation:su .8s 4s forwards}
+
+/* ===== SECTIONS ===== */
+section{position:relative;z-index:2;padding:6rem 2.5rem}
+.s-head{margin-bottom:3rem}
+.s-tag{font-family:'Share Tech Mono',monospace;font-size:.55rem;letter-spacing:4px;text-transform:uppercase;color:var(--neon);margin-bottom:.5rem}
+.s-tag::before{content:'// ';color:var(--muted)}
+.s-title{font-family:'Orbitron',sans-serif;font-size:clamp(1.8rem,4vw,3rem);font-weight:800;text-transform:uppercase;letter-spacing:1px}
+.s-title .hl{color:var(--neon);text-shadow:0 0 10px var(--neon-dim)}
+
+[data-r]{opacity:0;transform:translateY(40px);transition:all .8s cubic-bezier(.16,1,.3,1)}
+[data-r].vis{opacity:1;transform:translateY(0)}
+[data-r="1"]{transition-delay:.1s}[data-r="2"]{transition-delay:.2s}[data-r="3"]{transition-delay:.3s}[data-r="4"]{transition-delay:.4s}
+
+/* ===== ABOUT — TERMINAL BENTO ===== */
+.bento{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
+.b-card{background:var(--surface);border:1px solid var(--muted);padding:2rem;position:relative;overflow:hidden;transition:all .4s}
+.b-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--neon);transform:scaleX(0);transform-origin:left;transition:transform .5s}
+.b-card:hover{border-color:var(--neon)}.b-card:hover::before{transform:scaleX(1)}
+.b-card.s2{grid-column:span 2}.b-card.s3{grid-column:span 3}
+.b-card h3{font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:.8rem;color:var(--white)}
+.b-card h3::before{content:'> ';color:var(--neon)}
+.b-card p{font-size:.8rem;color:var(--dim);line-height:1.75}
+.b-card strong{color:var(--white);font-weight:600}
+.b-val{font-family:'Orbitron',sans-serif;font-size:2.8rem;font-weight:900;color:var(--neon);text-shadow:0 0 15px var(--neon-dim);line-height:1}
+.b-label{font-family:'Share Tech Mono',monospace;font-size:.5rem;text-transform:uppercase;letter-spacing:3px;color:var(--muted);margin-top:.5rem}
+
+/* ===== EXPERTISE — CLIP PATH CARDS ===== */
+.exp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
+.e-card{background:var(--surface);border:1px solid var(--muted);padding:2.5rem;position:relative;overflow:hidden;clip-path:polygon(0 0,calc(100% - 20px) 0,100% 20px,100% 100%,20px 100%,0 calc(100% - 20px));transition:all .4s;cursor:crosshair}
+.e-card::after{content:'';position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 20px 20px 0;border-color:transparent var(--muted) transparent transparent;transition:border-color .3s}
+.e-card:hover{border-color:var(--neon)}.e-card:hover::after{border-color:transparent var(--neon) transparent transparent}
+.e-num{font-family:'Orbitron',sans-serif;font-size:3rem;font-weight:900;color:rgba(57,255,20,.04);position:absolute;top:.5rem;right:1.5rem;line-height:1}
+.e-card:hover .e-num{color:rgba(57,255,20,.08)}
+.e-ico{font-size:1.2rem;margin-bottom:1rem;display:inline-block;padding:.5rem;background:var(--neon-dim);border:1px solid rgba(57,255,20,.2)}
+.e-card h3{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:.6rem}
+.e-card p{font-size:.78rem;color:var(--dim);line-height:1.75}
+
+/* ===== TIMELINE ===== */
+.tl{max-width:800px;padding-left:3rem;position:relative}
+.tl::before{content:'';position:absolute;left:0;top:0;bottom:0;width:1px;background:repeating-linear-gradient(to bottom,var(--neon) 0,var(--neon) 4px,transparent 4px,transparent 8px)}
+.tl-i{margin-bottom:4rem;position:relative}
+.tl-i::before{content:'■';position:absolute;left:-3rem;top:.2rem;color:var(--neon);font-size:.6rem;text-shadow:0 0 8px var(--neon-glow);transform:translateX(-3px);transition:all .4s}
+.tl-i:hover::before{text-shadow:0 0 15px var(--neon-glow),0 0 30px var(--neon-dim);transform:translateX(-3px) scale(1.5)}
+.tl-date{font-family:'Share Tech Mono',monospace;font-size:.55rem;letter-spacing:3px;text-transform:uppercase;color:var(--neon);margin-bottom:.3rem}
+.tl-role{font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:800;text-transform:uppercase;letter-spacing:1px}
+.tl-co{font-size:.8rem;color:var(--muted);margin-bottom:1rem}
+.tl-desc{font-size:.82rem;color:var(--dim);line-height:1.8;margin-bottom:1rem}
+.tl-imp{background:var(--surface);border-left:2px solid var(--neon);padding:1.2rem 1.5rem;margin-bottom:1rem}
+.tl-imp .b-val{font-size:2rem}.tl-imp p{font-size:.75rem;color:var(--dim);margin-top:.2rem}
+.tags{display:flex;flex-wrap:wrap;gap:.4rem}
+.tag{font-family:'Share Tech Mono',monospace;font-size:.5rem;text-transform:uppercase;letter-spacing:1.5px;padding:.3rem .6rem;border:1px solid var(--muted);color:var(--dim);transition:all .3s}
+.tag:hover{border-color:var(--neon);color:var(--neon)}
+
+/* ===== PROJECTS — CARD STRIP ===== */
+.proj-scroll{display:flex;gap:2px;overflow-x:auto;padding-bottom:1rem;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.proj-scroll::-webkit-scrollbar{display:none}
+.p-card{min-width:340px;max-width:340px;background:var(--surface);border:1px solid var(--muted);flex-shrink:0;scroll-snap-align:start;overflow:hidden;transition:all .4s;position:relative;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,16px 100%,0 calc(100% - 16px))}
+.p-card:hover{border-color:var(--neon)}
+.p-card::after{content:'';position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 16px 16px 0;border-color:transparent var(--muted) transparent transparent;transition:border-color .3s}
+.p-card:hover::after{border-color:transparent var(--neon) transparent transparent}
+.p-vis{height:180px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.p-vis::after{content:'';position:absolute;bottom:0;left:0;right:0;height:50%;background:linear-gradient(to top,var(--surface),transparent)}
+.p-ico{font-size:3rem;opacity:.2;transition:all .4s}
+.p-card:hover .p-ico{opacity:.4;transform:scale(1.1)}
+.p-body{padding:1.5rem}
+.p-card h3{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:.4rem;transition:color .3s}
+.p-card:hover h3{color:var(--neon)}
+.p-card p{font-size:.72rem;color:var(--muted);line-height:1.7}
+.p-tags{display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.5rem}
+
+/* ===== SKILLS — DATA GRID ===== */
+.sk-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem}
+.sk-grp{margin-bottom:1.5rem}
+.sk-t{font-family:'Share Tech Mono',monospace;font-size:.5rem;text-transform:uppercase;letter-spacing:4px;color:var(--neon);margin-bottom:.8rem;padding-bottom:.5rem;border-bottom:1px solid var(--muted)}
+.sk-t::before{content:'■ ';font-size:.4rem}
+.sk-pills{display:flex;flex-wrap:wrap;gap:.4rem}
+.pill{font-size:.72rem;padding:.4rem .9rem;background:var(--surface);border:1px solid var(--muted);transition:all .3s;cursor:crosshair}
+.pill:hover{border-color:var(--neon);color:var(--neon);box-shadow:0 0 15px var(--neon-dim);transform:translateY(-2px)}
+.pill.pri{border-color:rgba(57,255,20,.25);color:var(--neon)}
+
+/* ===== CERTS ===== */
+.c-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.cert{background:var(--surface);border:1px solid var(--muted);padding:2rem;text-align:center;transition:all .4s;position:relative;overflow:hidden}
+.cert::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--neon);transform:scaleX(0);transition:transform .5s}
+.cert:hover{border-color:var(--neon)}.cert:hover::before{transform:scaleX(1)}
+.cert-ic{font-size:1.8rem;margin-bottom:.6rem;display:block}
+.cert h3{font-family:'Orbitron',sans-serif;font-size:.6rem;font-weight:700;letter-spacing:1px;text-transform:uppercase}
+.cert p{font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:1px;margin-top:.3rem}
+
+/* ===== CONTACT ===== */
+#contact{text-align:center;padding:8rem 2.5rem}
+.ct-title{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,5vw,4rem);font-weight:900;text-transform:uppercase;letter-spacing:2px;margin-bottom:1rem}
+.ct-title .hl{color:var(--neon);text-shadow:0 0 15px var(--neon-dim)}
+.ct-sub{font-size:.85rem;color:var(--dim);max-width:500px;margin:0 auto 2.5rem;line-height:1.8}
+.ct-row{display:flex;justify-content:center;gap:2px;flex-wrap:wrap;margin-bottom:2rem}
+.ct-link{display:flex;align-items:center;gap:.6rem;padding:.8rem 1.5rem;background:var(--surface);border:1px solid var(--muted);transition:all .3s;text-decoration:none;color:var(--white)}
+.ct-link:hover{border-color:var(--neon)}.ct-link svg{color:var(--neon)}
+.ct-link span{font-family:'Share Tech Mono',monospace;font-size:.7rem}
+
+/* ===== FOOTER ===== */
+footer{border-top:1px solid var(--muted);padding:2rem 2.5rem;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:2}
+.f-logo{font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:3px;color:var(--neon);text-shadow:0 0 8px var(--neon-dim)}
+.f-copy{font-family:'Share Tech Mono',monospace;font-size:.5rem;color:var(--muted);letter-spacing:2px}
+
+.divider{height:1px;background:var(--muted);margin:0 2.5rem;position:relative;z-index:2}
+
+/* ===== CRT FLICKER ===== */
+@keyframes flicker{0%{opacity:1}5%{opacity:.95}10%{opacity:1}15%{opacity:.98}20%{opacity:1}50%{opacity:1}55%{opacity:.97}60%{opacity:1}100%{opacity:1}}
+.hero-title{animation:flicker 4s infinite}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1024px){
+  .bento,.exp-grid{grid-template-columns:repeat(2,1fr)}.b-card.s3{grid-column:span 2}
+  .hud-data{display:none}.sk-grid{grid-template-columns:1fr}
+}
+@media(max-width:768px){
+  section{padding:4rem 1.2rem}nav{padding:.8rem 1.2rem}
+  .nav-links{display:none}.ham{display:block}
+  .nav-links.open{display:flex;flex-direction:column;position:absolute;top:100%;left:0;right:0;background:rgba(0,0,0,.97);border-bottom:1px solid var(--muted);padding:1.5rem;gap:1rem}
+  .toggle-wrap{display:none}
+  .hero{padding:6rem 1.2rem 3rem}
+  .bento,.exp-grid{grid-template-columns:1fr}.b-card.s2,.b-card.s3{grid-column:span 1}
+  .c-grid{grid-template-columns:1fr}
+  footer{flex-direction:column;gap:.8rem;text-align:center;padding:1.5rem 1.2rem}
+  .divider{margin:0 1.2rem}
+  .hud-corner{display:none}.coords{display:none}
+  .ct-row{flex-direction:column;align-items:center}
+  .p-card{min-width:280px;max-width:280px}
+  #contact{padding:5rem 1.2rem}
+}
+</style>
 </head>
+<body>
 
+<!-- 3D BG -->
+<canvas id="bg3d"></canvas>
 
-<body id="top">
+<!-- LOADER -->
+<div id="loader">
+  <div class="boot-text" id="bootText"></div>
+  <div class="boot-bar"><div class="boot-bar-inner"></div></div>
+  <div class="boot-status">SYSTEM READY</div>
+</div>
 
-    
-    <!-- preloader
-    ================================================== -->
-    <div id="preloader">
-        <div id="loader" class="dots-fade">
-            <div></div>
-            <div></div>
-            <div></div>
-        </div>
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-sys">SHOEB<span>.EXE</span></div>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#about">About</a></li>
+    <li><a href="#expertise">Expertise</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#skills">Skills</a></li>
+  </ul>
+  <div class="toggle-wrap">
+    <span class="toggle-label on">ON</span>
+    <div class="toggle" id="themeToggle"></div>
+    <span class="toggle-label off">OFF</span>
+  </div>
+  <button class="ham" id="ham"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-inner">
+    <div class="hud-corner hud-tl"></div><div class="hud-corner hud-tr"></div>
+    <div class="hud-corner hud-bl"></div><div class="hud-corner hud-br"></div>
+
+    <div class="hero-tag">system.initialized — ready for deployment</div>
+    <h1 class="hero-title glitch" data-text="I ENGINEER INTELLIGENT SYSTEMS.EXE">
+      <span class="ln"><span>I Engineer</span></span>
+      <span class="ln"><span>Intelligent</span></span>
+      <span class="ln"><span>Systems<span class="exe">.EXE</span></span></span>
+    </h1>
+    <div class="hero-sub">// FRONTEND × BACKEND × ALGORITHMS × CLOUDOPS</div>
+    <p class="hero-desc">Engineering scalable solutions that deliver impactful results and drive measurable business growth across aviation and artificial intelligence industries.</p>
+    <div class="hero-btns">
+      <a href="#projects" class="btn-exe">EXPLORE_WORK</a>
+      <a href="#contact" class="btn-term">INIT_CONTACT</a>
     </div>
 
-
-    <!-- page wrap
-    ================================================== -->
-    <div id="page" class="s-pagewrap ss-home">
-
-
-        <!-- # site header 
-        ================================================== -->
-        <header class="s-header">
-
-            <div class="row s-header__inner width-sixteen-col">
-
-                <div class="s-header__block">
-                    <div class="s-header__logo">
-                        <a class="logo" href="index.html">
-                            <img src="images/logo.svg" alt="Homepage">
-                        </a>
-                    </div>
-
-                    <a class="s-header__menu-toggle" href="#0"><span>Menu</span></a>
-                </div> <!-- end s-header__block -->
-
-                <nav class="s-header__nav">
-    
-                    <ul class="s-header__menu-links">
-                        <li><a href="#about" class="smoothscroll">About</a></li>
-                        <li><a href="#experience" class="smoothscroll">Experience</a></li>
-                        <li><a href="#projects" class="smoothscroll">Projects</a></li>
-                        <li><a href="#skills" class="smoothscroll">Skills</a></li>
-                        <li><a href="#contact" class="smoothscroll">Contact</a></li>
-                    </ul>
-
-                    <div class="s-header__contact">
-                        <a href="#contact" class="btn btn--primary smoothscroll">Let's Work Together</a>                        
-                    </div> <!-- s-header__contact -->
-    
-                </nav> <!-- end s-header__nav -->
-
-            </div> <!-- end s-header__inner -->
-
-        </header> <!-- end s-header -->
-
-
-        <!-- # site main content
-        ================================================== -->
-        <section id="content" class="s-content">
-
-            <!-- intro
-            ----------------------------------------------- -->
-            <section id="intro" class="s-intro">
-
-                <div class="row s-intro__content width-sixteen-col">
-
-                    <div class="column lg-12 s-intro__content-inner grid-block">
-                        
-                        <div class="s-intro__content-text">
-                            <div class="s-intro__content-pretitle text-pretitle">Hello, I'm Shoeb</div>
-                            <h2 class="s-intro__content-title">
-                            I engineer frontend, backend,<br>
-                            algorithms, and cloudops solutions <br>
-                            delivering impactful results and <br>
-                            driving business growth.<br>
-                            </h2>
-                        </div> <!-- s-intro__content-text -->
-
-                        <div class="s-intro__content-media"> 
-                            <div class="s-intro__content-media-inner">                               
-                                <div class="lines">                               
-                                    <span></span>                                  
-                                </div>
-                            </div>
-                        </div> <!-- s-intro__content-media -->                      
-
-                        <div class="s-intro__scroll-down">
-                            <a href="#about" class="smoothscroll">
-                                <div class="scroll-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#97b34a" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">&lt;!--!  Atomicons Free 1.00 by @atisalab License - https://atomicons.com/license/ (Icons: CC BY 4.0) Copyright 2021 Atomicons --&gt;<polyline points="7 13 12 18 17 13"></polyline><line x1="12" y1="18" x2="12" y2="6"></line></svg>
-                                </div>
-                                <span>Scroll for more</span>
-                            </a>
-                        </div> <!-- s-intro__scroll-down -->
-                        
-                    </div> <!-- s-intro__content-inner -->
-
-                </div> <!-- s-intro__content -->
-
-            </section> <!-- end s-intro -->
-
-            <!-- about
-            ----------------------------------------------- -->
-            <section id="about" class="s-about target-section">
-
-                <div class="row s-about__content width-sixteen-col">
-                    <div class="column grid-block grid-section-split">
-
-                        <img src="images/geometric_shape.svg" alt="" class="s-about__content-imgbg">
-
-                        <div class="section-header grid-section-split__header">
-                            <div class="text-pretitle">About</div>                           
-                            <h2 class="text-display-title">
-                            About
-                            </h2>                           
-                        </div> <!-- end section-header -->
-
-                        <div class="s-about__content-main grid-section-split__primary">
-                            <p class="attention-getter">
-                                Innovative AI and Machine Learning specialist with expertise in Python and aviation industry software solutions. Seeking to leverage
-                                advanced skills in deep learning, computer vision, and cloud technologies to drive cutting-edge AI solutions and optimize operations.
-                            </p>
-
-                            <p class="attention-getter">
-                                Experienced in developing and deploying scalable applications using Docker, Kubernetes, and AWS-EKS, with a proven track record in
-                                creating impactful AI-driven and optimization applications ranging from text-to-image generators to airline maintenance management
-                                systems.
-                            </p>
-
-                            <p class="attention-getter">
-                                Demonstrated ability to streamline complex aviation processes through custom software solutions, enhancing efficiency and
-                                data-driven decision making.
-                            </p>
-                            <p class="attention-getter">
-
-<h4 style="color: white;">What I Bring to the Table</h4>
-
-                            Expertise in AI and Machine Learning: From deep learning to computer vision, I harness the power of AI to solve complex problems and create impactful solutions.
-
-                            <br>
-                            <br>
-                            Full-Stack Development: I can build complete solutions from the ground up, crafting intuitive frontends and robust backends that work seamlessly together.
-                            <br>
-                            <br>
-                                                        Cloud and DevOps Proficiency: With hands-on experience in Docker, Kubernetes, and AWS-EKS, I ensure that applications are not just built, but efficiently deployed and scaled in cloud environments.
-                                                        <br>
-                                                        <br>
-                                                                                    Algorithm Design: I excel in writing complex algorithms, optimizing processes, and finding innovative solutions to challenging technical problems.
-                                                                                    <br>
-                                                                                    <br>
-                                                                                                                Integration Specialist: I have a knack for creating complex solutions that integrate multiple technologies, bridging gaps and creating synergies between different systems and platforms.
-                        </p>
-
-                        </div> <!-- end s-about__content-main -->
-
-                        <div class="s-about__content-btn grid-section-split__bottom">
-
-                        </div> <!-- end s-about__content-btn -->
-                    
-                    </div> <!-- content-inner -->
-                </div>
-                
-            </section> <!-- end s-about -->
-
-            <section id="experience" class="s-experience target-section" style="background-color: #FDF6E8;">
-                <div class="row s-experience__content width-sixteen-col">
-                    <div class="column grid-block grid-section-split">
-                        <div class="section-header grid-section-split__header">
-                            <div class="text-pretitle">Experience</div>
-                            <h2 class="text-display-title">Professional Experience</h2>
-                        </div>
-            
-                        <div class="s-experience__content-main grid-section-split__primary">
-                            <div class="experience-item">
-                                <h3>Software Developer</h3>
-                                <p class="experience-meta">Tristar Avia Solutions : Oct 2023 - Present</p>
-                                <ul>
-                                    <li>Developed Airline Applications: Designed and implemented several airline-specific applications including Airline Crew Rostering Optimizer, Aircraft Line Maintenance, Aircraft Handling, and Aircraft Planning.</li>
-                                    <li>Technology Stack: Utilized Flutter for app development, Python for algorithms and backend, AWS Cloud for deployment, leveraging its robust infrastructure for optimal performance and scalability, and Implemented DevOps practices using Docker for containerization.</li>
-                                    <li>Collaboration and Communication: Worked closely with cross-functional teams, including airline operations and maintenance personnel, to gather requirements and ensure the applications meet industry standards and client needs.</li>
-                                    <li>Continuous Improvement: Engaged in ongoing learning and adaptation to new technologies and methodologies to improve app functionality and performance.</li>
-                                </ul>
-                                <h4>Impact:</h4>
-                                <ul>
-                                    <li>Dramatically improved operational efficiency by reducing roster generation time by 91.67%, from 2 hours to just 10 minutes for huge number of crew members and flights.</li>
-                                    <li>Automation of business processes in the aviation industry.</li>
-                                    <li>Significantly reduced paperwork and manual data entry, minimizing errors and improving data accuracy.</li>
-                                    <li>Streamlined communication between maintenance crews, administrative staff, and finance departments.</li>
-                                    <li>Enhanced airline resource management, saving thousands of work hours and significantly reducing scheduling conflicts.</li>
-                                    <li>Improved crew satisfaction and work-life balance through more efficient and fair scheduling.</li>
-                                    <li>Reduced human error in the scheduling process, leading to fewer operational inconsistencies and potential cost savings.</li>
-                                    <li>Showcased scalability for larger airlines, with the ability to handle more complex scheduling scenarios efficiently.</li>
-                                </ul>
-                            </div>
-            
-                            <div class="experience-item">
-                                <h3>Apprenticeship</h3>
-                                <p class="experience-meta">Linux World Informatics Pvt Ltd : 15-09-2021 – 14-09-2022</p>
-                                <p>During my apprenticeship, I underwent a comprehensive 12-month program focusing on cutting-edge technologies. I gained expertise in Machine Learning and Deep Learning, utilizing AWS for cloud computing, Docker for containerization, and Kubernetes for orchestration. Additionally, my training covered Shell Scripting, and Linux Administration. I honed my programming skills in Python, ensuring a robust foundation across diverse tech stacks.</p>
-                                <h4>Technological Exposure:</h4>
-                                <ul>
-                                    <li>Developed proficiency in Machine Learning and Deep Learning techniques, implementing models in Python and TensorFlow.</li>
-                                    <li>Gained hands-on experience with AWS Cloud services for scalable and reliable application deployment.</li>
-                                    <li>Utilized Docker for containerization and Kubernetes for container orchestration to streamline development workflows.</li>
-                                    <li>Learnt Linux Administration for efficient system operations and maintenance.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            <div id="projects-section-placeholder"></div>
-
-            <section id="projects" class="s-projects target-section" style="background-color: #2A3C2A; color: #FDF6E8;">
-                <div class="row s-projects__content width-sixteen-col">
-                    <div class="column grid-block grid-section-split">
-                        <div class="section-header grid-section-split__header">
-                            <div class="text-pretitle" style="color: #97B34A;">Projects</div>
-                            <h2 class="text-display-title" style="color: #FDF6E8;">Key Projects</h2>
-                        </div>
-                        
-                        <div class="s-projects__content-main grid-section-split__primary">
-                            <div class="project-item">
-                                <h3 style="color: #97B34A;">Text to Image Generator Using Generative Adversarial Network (VQGAN)</h3>
-                                <p class="project-meta" style="color: #FDF6E8;">Machine Learning, DevOps, Cloud</p>
-                                <ul style="color: #FDF6E8;">
-                                    <li>Implemented a VQGAN model to generate images from textual descriptions, trained on a diverse dataset for accurate interpretation and visualization.</li>
-                                    <li>Integrated the GAN model into a web application using the MERN stack (MongoDB, Express.js, React.js, Node.js) for robust user interactions and data management.</li>
-                                    <li>Deployed the application on AWS-EKS for dynamic scalability, reliability, and high availability.</li>
-                                </ul>
-                            </div>
-            
-                            <div class="project-item">
-                                <h3 style="color: #97B34A;">Airline Crew Rostering Optimizer</h3>
-                                <p class="project-meta" style="color: #FDF6E8;">Python, Flutter, AWS (Fargate, S3, Lambda, CloudWatch, API Gateway, ECR), Containerization, Serverless Computing</p>
-                                <ul style="color: #FDF6E8;">
-                                    <li>Developed a high-performance, cloud-based optimizer that reduced roster generation time for 60 crew members and 550 flights from 2 hours to 10 minutes (91.67% improvement).</li>
-                                    <li>Architected a scalable cloud infrastructure on AWS, utilizing Fargate, S3, and Lambda for efficient processing and storage.</li>
-                                    <li>Created a user-friendly mobile application interface using Flutter for seamless interaction.</li>
-                                    <li>Implemented real-time progress tracking using AWS CloudWatch and Lambda.</li>
-                                    <li>Engineered an end-to-end automated workflow from user input to roster generation and delivery.</li>
-                                </ul>
-                            </div>
-            
-                            <div class="project-item">
-                                <h3 style="color: #97B34A;">Plant Disease Predictor</h3>
-                                <p class="project-meta" style="color: #FDF6E8;">Python, CNN, Computer Vision, Deep Learning</p>
-                                <ul style="color: #FDF6E8;">
-                                    <li>Developed a web-based application using Convolutional Neural Networks (CNN) for image classification of plant diseases.</li>
-                                    <li>Implemented a user-friendly interface for easy image upload and real-time disease detection results.</li>
-                                    <li>Created a practical tool for early plant disease diagnosis in agriculture.</li>
-                                </ul>
-                            </div>
-            
-                            <div class="project-item">
-                                <h3 style="color: #97B34A;">Vehicle Detection and Counting System for CCTV Surveillance</h3>
-                                <p class="project-meta" style="color: #FDF6E8;">Computer Vision, Python, OpenCV</p>
-                                <ul style="color: #FDF6E8;">
-                                    <li>Developed an advanced Machine Learning-based system for vehicle detection and counting in CCTV footage.</li>
-                                    <li>Enhanced traffic monitoring and security capabilities through computer vision techniques.</li>
-                                </ul>
-                            </div>
-            
-                            <div class="project-item">
-                                <h3 style="color: #97B34A;">Airline Line Maintenance Management System</h3>
-                                <p class="project-meta" style="color: #FDF6E8;">Python, Flutter, AWS (S3, Lambda), MongoDB, Serverless</p>
-                                <ul style="color: #FDF6E8;">
-                                    <li>Developed a comprehensive mobile application to streamline and digitize the airline Line Maintenance process.</li>
-                                    <li>Designed an intuitive interface for quick and accurate data entry of flight and maintenance information.</li>
-                                    <li>Implemented modules for capturing detailed maintenance data, including flight timing, replenishment data, defect management, and manpower allocation.</li>
-                                    <li>Created a secure backend system for storage and retrieval of maintenance reports.</li>
-                                    <li>Developed an automated invoice generation system based on submitted reports.</li>
-                                    <li>Implemented role-based access control for various user types.</li>
-                                    <li>Enabled real-time data sharing across departments, improving coordination and decision-making.</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- expertise
-            ----------------------------------------------- -->
-            <section id="expertise" class="s-expertise">
-
-                <div class="row s-expertise__content width-sixteen-col">
-                    <div class="column xl-12 grid-block grid-section-split">
-
-                        <div class="section-header grid-section-split__header">
-                            <div class="text-pretitle">Expertise</div>                           
-                            <h2 class="text-display-title">
-                            My key areas of expertise.
-                            </h2>     
-                            
-                            <p class="lead">
-                                Versatile AI and Software Engineering professional with a proven track record in developing cutting-edge solutions for the aviation industry. Combines deep expertise in machine learning, cloud architecture, and full-stack development to create innovative, scalable applications that drive operational efficiency and technological advancement.                            </p>
-                        </div> <!-- end section-header -->
-
-                        <div class="s-expertise__content-main grid-section-split__primary">
-
-                            <div class="grid-list-items list-items show-ctr">
-                                <div class="grid-list-items__item list-items__item">
-                                    <div class="grid-list-items__title list-items__item-header">
-                                        <h3 class="list-items__item-title">Machine Learning and AI Solutions</h3>
-                                    </div>
-                                    <div class="grid-list-items__text list-items__item-text">
-                                        <p>
-                                         Proficient in developing advanced machine learning models and AI-driven applications, including generative adversarial networks (GANs) for text-to-image generation and convolutional neural networks (CNNs) for image classification in agricultural and surveillance contexts.
-                                        </p>
-                                    </div>
-                                </div> <!-- list-item -->
-                                <div class="grid-list-items__item list-items__item">
-                                    <div class="grid-list-items__title list-items__item-header">
-                                        <h3 class="list-items__item-title">Aviation Industry Software Development</h3>
-                                    </div>
-                                    <div class="grid-list-items__text list-items__item-text">
-                                        <p>
-                                        Extensive experience in creating tailored software solutions for the airline industry, including crew rostering optimizers, line maintenance management systems, and aircraft planning applications, resulting in significant operational efficiencies and cost savings.
-                                        </p>
-                                    </div>
-                                </div> <!-- list-expertise__item -->
-                                <div class="grid-list-items__item list-items__item">
-                                    <div class="grid-list-items__title list-items__item-header">
-                                        <h3 class="list-items__item-title">Cloud Architecture and DevOps</h3>
-                                    </div>
-                                    <div class="grid-list-items__text list-items__item-text">
-                                        <p>
-                                           Strong expertise in designing and implementing scalable cloud infrastructures using AWS services (EKS, Fargate, Lambda, S3) and DevOps practices with Docker and Kubernetes, ensuring robust and efficient deployment of complex applications.
-                                        </p>
-                                    </div>
-                                </div> <!-- list-expertise__item -->
-                                <div class="grid-list-items__item list-items__item">
-                                    <div class="grid-list-items__title list-items__item-header">
-                                        <h3 class="list-items__item-title">Full-Stack Development with Focus on Mobile</h3>
-                                    </div>
-                                    <div class="grid-list-items__text list-items__item-text">
-                                        <p>
-                                             Skilled in full-stack development, particularly in creating user-friendly mobile applications using Flutter, integrated with powerful backend systems and APIs to deliver seamless user experiences in mission-critical environments.
-                                        </p>
-                                    </div>
-                                </div> <!-- list-expertise__item -->
-
-                            </div> <!-- grid-list-items -->
-                        </div> <!-- end s-expertise__content-main -->
-
-                        
-
-                    </div> <!-- end grid-block-->
-                </div> <!-- end s-expertise__content -->
-
-            </section> <!-- end s-expertise -->
-
-            <!-- clients
-            ----------------------------------------------- -->
-            <section id="skills" class="s-skills"style="background-color: #FDF6E8;">    
-
-                <div class="row s-clients__content-block width-sixteen-col">
-                    <div class="column xl-12 grid-block grid-section-split">
-                    
-                        <div class="section-header grid-section-split__header">
-                            <div class="text-pretitle">Skills</div>                           
-                            <h2 class="text-display-title">
-                                Key Skills Powering My Solutions                            </h2>       
-                        </div> <!-- end section-header -->
-                    
-                    
-                    </div> <!-- end column -->
-                </div> <!-- end row -->
-
-                <div class="row s-clients__content-block width-sixteen-col">
-                    <div class="column xl-12">
-                    
-                        <div class="clients-list">                            
-                            <div class="clients-list__item">
-                                <a href="#0">
-                                    <img src="images/clients/pythonnew.jpg" alt="">
-                                </a>
-                            </div>
-                            <div class="clients-list__item">
-                                <a href="#0">
-                                    <img src="images/clients/red-hat-logo-1.svg" alt="">
-                                </a>
-                            </div>
-                            <div class="clients-list__item">
-                                <a href="#0">
-                                    <img src="images/clients/docker-1.svg" alt="">
-                                </a>
-                            </div>
-                            <div class="clients-list__item">
-                                <a href="#0">
-                                    <img src="images/clients/aws-2.svg" alt="AWS" style="max-width: 60%; height: auto;">
-                                </a>
-                            </div>
-                            <div class="clients-list__item">
-                                <a href="#0">
-                                    <img src="images/clients/flutter1.png" alt="AWS" style="max-width: 60%; height: auto;">
-                                </a>
-                            </div>
-                            <div class="column clients-list__item">
-                                <a href="#0">
-                                    <img src="images/clients/kubernetes-horizontal-black.svg" alt="">
-                                </a>
-                            </div><div class="clients-list__item">
-                                <a href="#0">
-                                    <img src="images/clients/ml.png" alt="ml" style="max-width: 60%; height: auto;">
-                                </a>
-                            </div>
-                           
-                           
-                        </div> <!-- end clients-list -->
-
-                    </div> <!-- end column -->
-                </div> <!-- end row -->
-                                
-                <div class="row s-clients__content-block width-sixteen-col">
-                    <div class="column xl-12 testimonials">
-                        <div class="swiper-container testimonials__slider home-slider">
-                            <div class="swiper-wrapper">
-                                <div class="testimonials__slide swiper-slide">
-                                    <div class="testimonials__author">
-                                       <!-- <img src="images/avatars/user-01.jpg" alt="Author image" class="testimonials__avatar"> --> 
-                                        <cite class="testimonials__cite">
-                                        <h5>Technical Skills</h5>
-                                    </div>
-                                    <p>
-                                
-
-                                        Programming Languages: Python, Dart (Flutter SDK)
-                                        <br>
-                                        Cloud Technologies: AWS (EKS, Fargate, EC2, Lambda, API Gateway, CloudWatch, IAM, S3, SES, ECR)
-                                        <br>
-
-                                        DevOps: Docker, Kubernetes
-                                        <br>
-
-                                        Machine Learning & AI: TensorFlow, Generative Adversarial Networks (GANs), Convolutional Neural Networks (CNNs)
-                                        Computer Vision: OpenCV
-                                        <br>
-                                        Mobile App Development: Flutter
-                                    </p>
-                                </div>
-                                <div class="testimonials__slide swiper-slide">
-                                    <div class="testimonials__author">
-                                       <!-- <img src="images/avatars/user-01.jpg" alt="Author image" class="testimonials__avatar"> --> 
-                                       <cite class="testimonials__cite">
-                                        <h5>Domain Expertise</h5>
-                                        
-                                    </div>
-                                    <p>
-                                      
-
-                                        Aviation Industry Software Solutions
-                                        <br>
-                                        Airline Operations Optimization
-                                        <br>
-                                        Maintenance Management Systems
-                                        <br>
-                                        Integrating Multiple Technologies
-                                        <br>
-                                        Writing Complex Algorithms
-                                        <br>
-                                        Cloud-based Solution Architecture
-                                    </p>
-                                </div>
-                                <div class="testimonials__slide swiper-slide">
-                                    <div class="testimonials__author">
-                                       <!-- <img src="images/avatars/user-01.jpg" alt="Author image" class="testimonials__avatar"> --> 
-                                       <cite class="testimonials__cite">
-                                           
-                                            <h5>Methodologies & Practices</h5>
-                                        
-                                    </div>
-                                    <p>
-                                    
-                                                                                
-                                        Agile Development
-                                        <br>
-                                        DevOps Practices
-                                        <br>
-                                        Cloud-Native Application Development
-                                    </p>
-                                </div>
-                               
-                            </div> <!-- end swiper-wrapper --> 
-                
-                            <div class="swiper-pagination"></div>
-                
-                        </div> <!--end testimonials__slider -->                    
-                    </div> <!-- end column -->
-                </div> <!-- end row -->
-                <div class="row s-clients__content-block width-sixteen-col">
-                    <div class="column xl-12 testimonials">
-                        <div class="swiper-container testimonials__slider home-slider">
-                            <div class="swiper-wrapper">
-                                <div class="testimonials__slide swiper-slide">
-                                    <div class="testimonials__author">
-                                       <!-- <img src="images/avatars/user-01.jpg" alt="Author image" class="testimonials__avatar"> --> 
-                                       <cite class="testimonials__cite">
-                                           
-                                            <h5>Soft Skills</h5>
-                                        
-                                    </div>
-                                    <p>
-                                
-                                    
-                                        Critical Thinking
-                                        Collaborative Problem-Solving
-                                        Cross-Functional Communication
-                                        Continuous Learning and Adaptation
-                                    </p>
-                                </div>
-
-                                
-                                <div class="testimonials__slide swiper-slide">
-                                    <div class="testimonials__author">
-                                       <!-- <img src="images/avatars/user-01.jpg" alt="Author image" class="testimonials__avatar"> --> 
-                                       <cite class="testimonials__cite">
-                                        <h5> AI & Emerging Technologies</h5>
-                                    </div>
-                                    <p>
-                                    
-
-                                        Prompt Engineering: ChatGPT, Claude, Midjourney prompts
-                                        <br>
-                                        Reverse Prompt Engineering
-                                        <br>
-                                        Context Memorization Techniques
-                                        <br>
-                                        Self Made prompt Engineering Techniques
-                                    </p>
-                                </div> 
-                            </div> <!-- end swiper-wrapper --> 
-                
-                            <div class="swiper-pagination"></div>
-                
-                        </div> <!--end testimonials__slider -->                    
-                    </div> <!-- end column -->
-                </div> <!-- end row -->
-            </section> <!-- end s-clients -->            
-
-        </section> <!-- s-content-->
-
-      
-
-        <!-- # journal
-================================================== -->
-<!-- # journal
-================================================== -->
-<!-- # journal
-================================================== -->
-<section id="journal" class="s-journal">
-
-    <div class="row s-journal__content width-sixteen-col">
-        <div class="column xl-12 grid-block">
-
-            <div class="grid-full section-header text-center">
-                <div class="text-pretitle">Certificates</div>                           
-                <h2 class="text-display-title">
-                All Certifications.
-                </h2>  
-            </div> <!-- end section-header --> 
-
-            <div class="grid-full s-journal__content-main grid-list-items">
-
-                <div class="certifications-container">
-
-
-                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-                    <div class="certificate-card" onclick="openPDF('cert/redhat.jpeg', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-brands fa-redhat"></i> <!-- Added RedHat icon here -->
-                        </div>
-                    
-                        <h3>RedHat Certified Specialist</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/redhatb.jpeg" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    <div class="certificate-card" onclick="openPDF('cert/Mohammed Mujtaba Shoeb.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            🏆 <!-- Added RedHat icon here -->
-                        </div>
-                    
-                        <h3>ARTH 12 Months Program</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/Mohammed Mujtaba Shoeb.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-
-                  
-                    
-                    </div>
-                    
-                </div>
-
-            </div> <!-- end grid-list-items -->
-
-        </div> <!-- end grid-block-->
-    </div> <!-- end s-journal__content -->
-
-</section> <!-- end s-journal -->
-
-<section id="journal" class="s-journal"></section>
-
-    <div class="row s-journal__content width-sixteen-col">
-        <div class="column xl-12 grid-block">
-
-            <div class="grid-full section-header text-center">
-                <div class="text-pretitle">.</div>                           
-                <h2 class="text-display-title">
-               .
-                </h2>  
-            </div> <!-- end section-header --> 
-
-            <div class="grid-full s-journal__content-main grid-list-items">
-
-                <div class="certifications-container">
-
-
-                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-                    <div class="certificate-card" onclick="openPDF('cert/specializationInContainer.pdf', 'Specialization in Containers')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-brands fa-docker"></i> <!-- Added RedHat icon here -->
-                        </div>
-                    
-                        <h3>Docker and Containers</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/specializationInContainer.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    <div class="certificate-card" onclick="openPDF('cert/quantumComputingFundamentals.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-solid fa-microchip" style="color: #2496ED; font-size: 50px;"></i>                                        </div>
-                    
-                        <h3>Quantum Computing</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/quantumComputingFundamentals.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    <div class="certificate-card" onclick="openPDF('cert/AWSSolutionsArchitect.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-brands fa-aws" style="color: orange; font-size: 50px;"></i>                                        </div>
-                    
-                        <h3>AWS Solutions Architect</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/AWSSolutionsArchitect.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    <div class="certificate-card" onclick="openPDF('cert/DataScience.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-solid fa-people" style="color: greenyellow; font-size: 50px;"></i>                                        </div>
-                    
-                        <h3>Data Science</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/DataScience.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    <div class="certificate-card" onclick="openPDF('cert/quantumComputingFundamentals.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-solid fa-microchip" style="color: #2496ED; font-size: 50px;"></i>                                        </div>
-                    
-                        <h3>Quantum Computing</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/quantumComputingFundamentals.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    <div class="certificate-card" onclick="openPDF('cert/quantumComputingFundamentals.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-solid fa-microchip" style="color: #2496ED; font-size: 50px;"></i>                                        </div>
-                    
-                        <h3>Quantum Computing</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/quantumComputingFundamentals.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                   
-
-                    <div class="certificate-card" onclick="openPDF('cert/AWSSolutionsArchitect.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-brands fa-redhat"></i> <!-- Added RedHat icon here -->
-                        </div>
-                    
-                        <h3>RedHat Certified Specialist</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/AWSSolutionsArchitect.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    <div class="certificate-card" onclick="openPDF('cert/AWSSolutionsArchitect.pdf', 'RedHat Certified Specialist')"> 
-
-                        <div class="certificate-icon">
-                            <i class="fa-brands fa-redhat"></i> <!-- Added RedHat icon here -->
-                        </div>
-                    
-                        <h3>RedHat Certified Specialist</h3>
-                        <p>Containers (ID: 230-286-924)</p>
-                    
-                        <div class="pdf-preview">
-                            <embed src="cert/AWSSolutionsArchitect.pdf" type="application/pdf" width="100%" height="150px" />
-                        </div>
-                    
-                    </div>
-                    
-                </div>
-
-            </div> <!-- end grid-list-items -->
-
-        </div> <!-- end grid-block-->
-    </div> <!-- end s-journal__content -->
-
-</section> <!-- end s-journal -->
+    <div class="hud-data">
+      <div class="hud-line">STATUS: <span class="val">ACTIVE</span></div>
+      <div class="hud-line">EFFICIENCY: <span class="val">91.67%</span></div>
+      <div class="hud-line">PROJECTS: <span class="val">10+</span></div>
+      <div class="hud-line">THREAT LVL: <span class="red">NONE</span></div>
+      <div class="hud-line">UPTIME: <span class="val">3+ YRS</span></div>
+      <div class="hud-line">異常デバイス検出 ■</div>
+    </div>
+  </div>
+  <div class="coords" id="coords">X:0000 Y:0000</div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track"><span>異常デバイス検出</span><span class="sep">■</span><span>ANOMALY DETECTED</span><span class="sep">■</span><span>SYSTEM OPERATIONAL</span><span class="sep">■</span><span>AI MODULE ACTIVE</span><span class="sep">■</span><span>CLOUD SYNC COMPLETE</span><span class="sep">■</span><span>異常デバイス検出</span><span class="sep">■</span><span>ANOMALY DETECTED</span><span class="sep">■</span><span>SYSTEM OPERATIONAL</span><span class="sep">■</span><span>AI MODULE ACTIVE</span><span class="sep">■</span><span>CLOUD SYNC COMPLETE</span><span class="sep">■</span></div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="s-head" data-r><div class="s-tag">01 — ABOUT</div><h2 class="s-title">OPERATOR <span class="hl">PROFILE</span></h2></div>
+  <div class="bento">
+    <div class="b-card s3" data-r="1"><h3>Identity</h3><p><strong>AI and Machine Learning specialist</strong> with deep expertise in Python and aviation industry software. Leveraging advanced skills in deep learning, computer vision, and cloud technologies. Experienced deploying <strong>scalable applications</strong> using Docker, Kubernetes, and AWS-EKS — from text-to-image generators to airline maintenance management systems.</p></div>
+    <div class="b-card" data-r="2"><div class="b-val" data-count="91">0%</div><div class="b-label">Efficiency Gain</div></div>
+    <div class="b-card" data-r="3"><div class="b-val" data-count="10">0+</div><div class="b-label">Projects Deployed</div></div>
+    <div class="b-card" data-r="4"><div class="b-val" data-count="6">0+</div><div class="b-label">Certifications</div></div>
+    <div class="b-card s2" data-r="1"><h3>Directive</h3><p><strong>Streamline complex aviation processes</strong> through custom software, enhancing efficiency and data-driven decision making. Every line of code is written with scalability, performance, and impact in mind.</p></div>
+    <div class="b-card" data-r="2"><div class="b-val" data-count="3">0+</div><div class="b-label">Years Active</div></div>
+  </div>
+</section>
+<div class="divider"></div>
+
+<!-- EXPERTISE -->
+<section id="expertise">
+  <div class="s-head" data-r><div class="s-tag">02 — EXPERTISE</div><h2 class="s-title">CORE <span class="hl">MODULES</span></h2></div>
+  <div class="exp-grid">
+    <div class="e-card" data-r="1"><div class="e-num">01</div><div class="e-ico">🧠</div><h3>AI & Machine Learning</h3><p>Building GANs for text-to-image, CNNs for classification, and intelligent optimization systems for real-world problems.</p></div>
+    <div class="e-card" data-r="2"><div class="e-num">02</div><div class="e-ico">✈️</div><h3>Aviation Software</h3><p>Crew rostering optimizers, line maintenance management, aircraft planning — massive operational efficiencies.</p></div>
+    <div class="e-card" data-r="3"><div class="e-num">03</div><div class="e-ico">☁️</div><h3>Cloud & DevOps</h3><p>Scalable AWS infrastructure (EKS, Fargate, Lambda) with Docker and Kubernetes for production deployments.</p></div>
+    <div class="e-card" data-r="4"><div class="e-num">04</div><div class="e-ico">📱</div><h3>Full-Stack & Mobile</h3><p>Flutter mobile apps with Python backends and APIs — seamless experiences in mission-critical environments.</p></div>
+  </div>
+</section>
+<div class="divider"></div>
+
+<!-- EXPERIENCE -->
+<section id="experience">
+  <div class="s-head" data-r><div class="s-tag">03 — EXPERIENCE</div><h2 class="s-title">MISSION <span class="hl">LOG</span></h2></div>
+  <div class="tl">
+    <div class="tl-i" data-r>
+      <div class="tl-date">Oct 2023 — Present</div>
+      <div class="tl-role">Software Developer</div>
+      <div class="tl-co">// Tristar Avia Solutions</div>
+      <p class="tl-desc">Designed airline applications: Crew Rostering Optimizer, Aircraft Line Maintenance, Aircraft Handling, Aircraft Planning. Flutter + Python + AWS + Docker stack.</p>
+      <div class="tl-imp"><div class="b-val">91.67%</div><p>Roster generation reduced from 2 hours to 10 minutes — 60 crew, 550 flights.</p></div>
+      <div class="tags"><span class="tag">Flutter</span><span class="tag">Python</span><span class="tag">AWS</span><span class="tag">Docker</span><span class="tag">Algorithms</span><span class="tag">Aviation</span></div>
+    </div>
+    <div class="tl-i" data-r>
+      <div class="tl-date">Sep 2021 — Sep 2022</div>
+      <div class="tl-role">Apprenticeship</div>
+      <div class="tl-co">// Linux World Informatics Pvt Ltd</div>
+      <p class="tl-desc">12-month intensive: ML, Deep Learning, AWS, Docker, Kubernetes, Shell Scripting, Linux Administration, Python.</p>
+      <div class="tags"><span class="tag">ML/DL</span><span class="tag">TensorFlow</span><span class="tag">AWS</span><span class="tag">Kubernetes</span><span class="tag">Linux</span></div>
+    </div>
+  </div>
+</section>
+<div class="divider"></div>
+
+<!-- TICKER RED -->
+<div class="ticker red"><div class="ticker-track" style="animation-direction:reverse"><span>PROJECTS LOADED</span><span class="sep">■</span><span>プロジェクトロード済み</span><span class="sep">■</span><span>EXECUTING DISPLAY</span><span class="sep">■</span><span>DATA STREAM ACTIVE</span><span class="sep">■</span><span>RENDER COMPLETE</span><span class="sep">■</span><span>PROJECTS LOADED</span><span class="sep">■</span><span>プロジェクトロード済み</span><span class="sep">■</span><span>EXECUTING DISPLAY</span><span class="sep">■</span><span>DATA STREAM ACTIVE</span><span class="sep">■</span><span>RENDER COMPLETE</span><span class="sep">■</span></div></div>
+
+<!-- PROJECTS -->
+<section id="projects">
+  <div class="s-head" data-r><div class="s-tag">04 — PROJECTS</div><h2 class="s-title">DEPLOYED <span class="hl">SYSTEMS</span></h2></div>
+  <div class="proj-scroll">
+    <div class="p-card" data-r="1"><div class="p-vis" style="background:linear-gradient(135deg,#0a0a00,#111100,#050500)"><div class="p-ico">🎨</div></div><div class="p-body"><div class="p-tags"><span class="tag">GAN</span><span class="tag">MERN</span><span class="tag">AWS-EKS</span></div><h3>VQGAN Image Generator</h3><p>VQGAN model generating images from text. MERN stack deployed on AWS-EKS for scalability.</p></div></div>
+    <div class="p-card" data-r="2"><div class="p-vis" style="background:linear-gradient(135deg,#050a05,#0a110a,#030503)"><div class="p-ico">✈️</div></div><div class="p-body"><div class="p-tags"><span class="tag">Python</span><span class="tag">Flutter</span><span class="tag">Serverless</span></div><h3>Crew Rostering Optimizer</h3><p>91.67% time reduction. AWS Fargate + Lambda + CloudWatch tracking.</p></div></div>
+    <div class="p-card" data-r="3"><div class="p-vis" style="background:linear-gradient(135deg,#050505,#0a0a0a,#030303)"><div class="p-ico">🌿</div></div><div class="p-body"><div class="p-tags"><span class="tag">CNN</span><span class="tag">CV</span></div><h3>Plant Disease Predictor</h3><p>CNN-powered real-time plant disease classification for agriculture.</p></div></div>
+    <div class="p-card" data-r="4"><div class="p-vis" style="background:linear-gradient(135deg,#0a0505,#110a0a,#050303)"><div class="p-ico">🚗</div></div><div class="p-body"><div class="p-tags"><span class="tag">OpenCV</span><span class="tag">ML</span></div><h3>Vehicle Detection System</h3><p>ML-based CCTV vehicle detection and counting for traffic monitoring.</p></div></div>
+    <div class="p-card" data-r="1"><div class="p-vis" style="background:linear-gradient(135deg,#050508,#0a0a10,#030305)"><div class="p-ico">🔧</div></div><div class="p-body"><div class="p-tags"><span class="tag">Flutter</span><span class="tag">Lambda</span><span class="tag">MongoDB</span></div><h3>Line Maintenance System</h3><p>Digitizing airline maintenance — defect management, auto-invoicing, RBAC.</p></div></div>
+  </div>
+</section>
+<div class="divider"></div>
+
+<!-- SKILLS -->
+<section id="skills">
+  <div class="s-head" data-r><div class="s-tag">05 — SKILLS</div><h2 class="s-title">INSTALLED <span class="hl">PACKAGES</span></h2></div>
+  <div class="sk-grid">
+    <div>
+      <div class="sk-grp" data-r><div class="sk-t">lang</div><div class="sk-pills"><span class="pill pri">Python</span><span class="pill">Dart/Flutter</span><span class="pill">JavaScript</span></div></div>
+      <div class="sk-grp" data-r><div class="sk-t">cloud.aws</div><div class="sk-pills"><span class="pill pri">EKS</span><span class="pill">Fargate</span><span class="pill">EC2</span><span class="pill">Lambda</span><span class="pill">API GW</span><span class="pill">CloudWatch</span><span class="pill">S3</span><span class="pill">IAM</span><span class="pill">SES</span><span class="pill">ECR</span></div></div>
+      <div class="sk-grp" data-r><div class="sk-t">devops</div><div class="sk-pills"><span class="pill pri">Docker</span><span class="pill pri">Kubernetes</span></div></div>
+    </div>
+    <div>
+      <div class="sk-grp" data-r><div class="sk-t">ml.ai</div><div class="sk-pills"><span class="pill pri">TensorFlow</span><span class="pill">GANs</span><span class="pill">CNNs</span><span class="pill">OpenCV</span><span class="pill">Deep Learning</span></div></div>
+      <div class="sk-grp" data-r><div class="sk-t">mobile</div><div class="sk-pills"><span class="pill pri">Flutter</span></div></div>
+      <div class="sk-grp" data-r><div class="sk-t">domain</div><div class="sk-pills"><span class="pill">Aviation</span><span class="pill">Airline Ops</span><span class="pill">Maintenance</span><span class="pill">Algorithms</span><span class="pill">Cloud Arch</span></div></div>
+    </div>
+  </div>
+</section>
+<div class="divider"></div>
+
+<!-- CERTS -->
+<section id="certs">
+  <div class="s-head" data-r><div class="s-tag">06 — CERTS</div><h2 class="s-title">VERIFIED <span class="hl">CREDENTIALS</span></h2></div>
+  <div class="c-grid">
+    <div class="cert" data-r="1"><div class="cert-ic">🎖️</div><h3>RedHat Certified</h3><p>Containers • 230-286-924</p></div>
+    <div class="cert" data-r="2"><div class="cert-ic">🏆</div><h3>ARTH 12 Months</h3><p>Training Program</p></div>
+    <div class="cert" data-r="3"><div class="cert-ic">🐳</div><h3>Docker Certified</h3><p>Containerization</p></div>
+    <div class="cert" data-r="1"><div class="cert-ic">⚛️</div><h3>Quantum Computing</h3><p>Emerging Tech</p></div>
+    <div class="cert" data-r="2"><div class="cert-ic">☁️</div><h3>AWS Solutions Arch</h3><p>Cloud Architecture</p></div>
+    <div class="cert" data-r="3"><div class="cert-ic">📊</div><h3>Data Science</h3><p>Analytics & ML</p></div>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker"><div class="ticker-track"><span>CONTACT PROTOCOL ACTIVE</span><span class="sep">■</span><span>接続プロトコルアクティブ</span><span class="sep">■</span><span>READY FOR TRANSMISSION</span><span class="sep">■</span><span>AWAITING INPUT</span><span class="sep">■</span><span>CONTACT PROTOCOL ACTIVE</span><span class="sep">■</span><span>接続プロトコルアクティブ</span><span class="sep">■</span><span>READY FOR TRANSMISSION</span><span class="sep">■</span><span>AWAITING INPUT</span><span class="sep">■</span></div></div>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div data-r>
+    <div class="s-tag" style="justify-content:center">07 — CONTACT</div>
+    <h2 class="ct-title">INITIATE<br><span class="hl">CONNECTION</span></h2>
+    <p class="ct-sub">Ready to leverage AI, machine learning, and custom software? Let's turn your vision into reality.</p>
+    <div class="ct-row">
+      <a href="mailto:meb@gmail.com" class="ct-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 7L2 7"/></svg><span>meb@gmail.com</span></a>
+      <a href="tel:+9" class="ct-link"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg><span>Phone</span></a>
+    </div>
+    <a href="mailto:meb@gmail.com" class="btn-exe" style="display:inline-block">EXECUTE_CONTACT</a>
+  </div>
+</section>
+
+<footer><div class="f-logo">SHOEB.EXE</div><div class="f-copy">© 2025 — ALL SYSTEMS OPERATIONAL</div></footer>
 
 <script>
-    function openPDF(pdfName, title) {
-    var newWindow = window.open(pdfName, '_blank');
-    newWindow.document.title = title;
-}
+// ===== BOOT SEQUENCE =====
+const bootLines=[
+  '> INITIALIZING SHOEB.EXE...',
+  '> LOADING CORE MODULES.......... OK',
+  '> AI ENGINE............. ACTIVE',
+  '> CLOUD INTERFACE....... CONNECTED',
+  '> AVIATION SUITE........ LOADED',
+  '> SCANNING PORTFOLIO DATA...',
+  '> 10 PROJECTS DETECTED',
+  '> 6 CERTIFICATIONS VERIFIED',
+  '> EFFICIENCY RATING: 91.67%',
+  '> ██████████████████████ 100%',
+  '> SYSTEM READY. WELCOME.'
+];
+const bootEl=document.getElementById('bootText');
+bootLines.forEach((line,i)=>{
+  const div=document.createElement('div');div.className='line';div.textContent=line;
+  div.style.animationDelay=(i*0.2)+'s';
+  bootEl.appendChild(div);
+});
+setTimeout(()=>document.getElementById('loader').classList.add('done'),3200);
+
+// ===== THREE.JS BACKGROUND =====
+(function(){
+  const c=document.getElementById('bg3d');
+  const r=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:false});
+  r.setSize(window.innerWidth,window.innerHeight);r.setPixelRatio(1);
+  const sc=new THREE.Scene();
+  const cam=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,.1,1000);cam.position.z=40;
+
+  // Grid particles
+  const geo=new THREE.BufferGeometry();const n=800;const pos=new Float32Array(n*3);
+  for(let i=0;i<n*3;i++)pos[i]=(Math.random()-.5)*100;
+  geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({color:0x39ff14,size:.06,transparent:true,opacity:.35});
+  const pts=new THREE.Points(geo,mat);sc.add(pts);
+
+  // Wireframe shapes
+  const shapes=[new THREE.IcosahedronGeometry(2,0),new THREE.OctahedronGeometry(1.5,0),new THREE.TetrahedronGeometry(1.8,0)];
+  const meshes=[];
+  shapes.forEach((g,i)=>{
+    const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0x39ff14,wireframe:true,transparent:true,opacity:.04}));
+    m.position.set((Math.random()-.5)*50,(Math.random()-.5)*40,(Math.random()-.5)*20);
+    m.userData={rx:(Math.random()-.5)*.008,ry:(Math.random()-.5)*.008};
+    sc.add(m);meshes.push(m);
+  });
+
+  let mx=0,my=0;
+  document.addEventListener('mousemove',e=>{mx=(e.clientX/window.innerWidth-.5)*2;my=(e.clientY/window.innerHeight-.5)*2});
+
+  (function a(){requestAnimationFrame(a);
+    pts.rotation.y+=.0002;
+    cam.position.x+=(mx*4-cam.position.x)*.015;cam.position.y+=(-my*3-cam.position.y)*.015;
+    cam.lookAt(sc.position);
+    meshes.forEach(m=>{m.rotation.x+=m.userData.rx;m.rotation.y+=m.userData.ry});
+    r.render(sc,cam);
+  })();
+  window.addEventListener('resize',()=>{cam.aspect=window.innerWidth/window.innerHeight;cam.updateProjectionMatrix();r.setSize(window.innerWidth,window.innerHeight)});
+})();
+
+// ===== COORDS =====
+document.addEventListener('mousemove',e=>{
+  document.getElementById('coords').textContent=`X:${String(e.clientX).padStart(4,'0')} Y:${String(e.clientY).padStart(4,'0')}`;
+});
+
+// ===== TOGGLE =====
+document.getElementById('themeToggle').addEventListener('click',function(){this.classList.toggle('off')});
+
+// ===== NAV =====
+document.getElementById('ham').addEventListener('click',()=>document.getElementById('navLinks').classList.toggle('open'));
+document.querySelectorAll('.nav-links a').forEach(a=>a.addEventListener('click',()=>document.getElementById('navLinks').classList.remove('open')));
+
+// ===== REVEAL =====
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')}),{threshold:.05,rootMargin:'0px 0px -30px 0px'});
+document.querySelectorAll('[data-r]').forEach(el=>obs.observe(el));
+
+// ===== COUNTERS =====
+const co=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;const el=e.target,t=+el.dataset.count,s=el.textContent.replace(/[0-9]/g,'');let c=0;const inc=t/40;const iv=setInterval(()=>{c+=inc;if(c>=t){c=t;clearInterval(iv)}el.textContent=Math.floor(c)+s},30);co.unobserve(el)}),{threshold:.5});
+document.querySelectorAll('[data-count]').forEach(el=>co.observe(el));
+
+// ===== SMOOTH SCROLL =====
+document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',function(e){e.preventDefault();const t=document.querySelector(this.getAttribute('href'));if(t)t.scrollIntoView({behavior:'smooth'})})});
 </script>
-
-
-          <!-- # cta
-        ================================================== -->
-        <section id="cta" class="s-cta">
-
-            <div class="row row-x-center text-center">
-                <div class="column xl-8 lg-12">
-
-                    <div class="s-cta__content">
-                        <h2 class="text-display-title">
-                        Get started with a consultation today.
-                        </h2>
-                        <p class="lead">
-                            Ready to revolutionize your business with cutting-edge technology? As a specialist in AI, machine learning, and aviation software solutions, I bring a unique blend of innovation and industry expertise to every project. Whether you're looking to optimize operations, develop custom applications, or leverage the power of AI, I'm here to turn your vision into reality. Let's collaborate to create solutions that not only meet your current needs but also propel your business into the future. Your success is my priority – let's start building it today.                        </p>
-                            <a href="#contact" class="btn btn--primary smoothscroll">Let's Work Together</a>                    </div>
-
-                </div>
-            </div>
-
-        </section> <!-- end s-cta -->
-
-
-    <!-- # contact section
-    ================================================== -->
-    <section id="contact" class="s-contact">
-        <div class="row s-contact__content width-sixteen-col">
-            <div class="column xl-12">
-                <h1 class="page-title">
-                    <span class="page-title__small-type text-pretitle">Contact</span>
-                    
-                </h1>
-
-            </div>
-        </div>
-
-        <div class="row pageintro">
-            <div class="column xl-6 lg-12">
-                <h2 class="text-display-title">                        Get In Touch. <br>
-                    Let's take your business to the next level.</h2>
-            </div>
-            <div class="column xl-6 lg-12 u-flexitem-x-right">
-                <p class="lead">
-                    In today's fast-paced digital landscape, staying ahead means leveraging cutting-edge technology. As an expert in AI, machine learning, and custom software development for the aviation industry, I'm here to help you navigate this complex terrain. Whether you're looking to streamline operations, implement AI-driven solutions, or develop robust applications, I bring the expertise to turn your vision into reality. Let's collaborate to create tailored solutions that not only address your current challenges but also position your business for future success. Your journey to technological transformation starts with a conversation - reach out today, and let's explore the possibilities together.
-
-                </p>
-            </div>                       
-        </div>
-
-        <div class="row pagemedia">
-            <div class="column xl-12">
-                <figure class="page-media">                                
-                    <img src="images/thumbs/contact/contact-1200.jpg" 
-                         srcset="images/thumbs/contact/contact-2400.jpg 2400w, 
-                                 images/thumbs/contact/contact-1200.jpg 1200w, 
-                                 images/thumbs/contact/contact-600.jpg 600w" sizes="(max-width: 2400px) 100vw, 2400px" alt="">
-                </figure>
-            </div>
-        </div>
-
-        <div class="row width-narrower pagemain">
-            <div class="column xl-12">
-                <h2>Let's Work Together</h2>
-
-                <div class="row">
-                    <div class="column xl-6 md-12 contact-cta">     
-                        <p>
-                            Revolutionize your aviation business with AI-powered solutions. As a specialist in machine learning and custom software, I transform complex challenges into efficient operations. Let's turn your vision into reality and propel your business into the future. Ready to innovate? Let's connect today.
-                        </p>
-
-                        <a href="mailto:#0" class="btn btn--primary u-fullwidth contact-btn">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" style="fill: rgba(0, 0, 0, 1);transform: ;msFilter:;"><path d="M20 4H4c-1.103 0-2 .897-2 2v12c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V6c0-1.103-.897-2-2-2zm0 2v.511l-8 6.223-8-6.222V6h16zM4 18V9.044l7.386 5.745a.994.994 0 0 0 1.228 0L20 9.044 20.002 18H4z"></path></svg>
-                            Send Me An Email
-                        </a>
-                    </div> 
-                  
-
-                    <div class="contact-block email-block">
-                        <h6>Email</h6>
-                        <a href="mailto:#0">mohdmujtabashoeb@gmail.com</a>
-                    </div>
-                    
-                    <div class="contact-block phone-block">
-                        <h6>Phone</h6>
-                        <ul class="contact-list">
-                            <li><a href="tel:9398923716">+91 9398923716</a></li>
-                        </ul>
-                    </div>
-
-
-                    </div>
-                </div>
-            </div>                        
-        </div> <!-- end pagemain -->
-    </section> <!-- end s-contact -->
-
-        <!-- # footer 
-        ================================================== -->
-        <footer class="s-footer">
-            <div class="row s-footer__content">
-                <div class="column xl-6 lg-6 md-12 s-footer__block s-footer__about">                    
-                    <h3>About Shoeb</h3>
-                    <p>
-                        Shoeb is an innovative AI and Machine Learning specialist with a focus on transforming the aviation industry through cutting-edge software solutions. With expertise in Python, cloud technologies, and full-stack development, Shoeb excels in creating scalable applications that optimize operations and drive business growth. From developing AI-driven tools to implementing complex algorithms, Shoeb's work consistently delivers impactful results. Committed to pushing the boundaries of technology, Shoeb is passionate about solving intricate challenges and propelling businesses into a more efficient, data-driven future.
-
-                    </p>               
-                </div>                
-                <div class="column xl-3 lg-6 md-12 s-footer__block s-footer__site-links">
-                    <h3>Site Links</h3>
-                    <ul class="link-list">
-                        <li><a href="#top" class="smoothscroll">Home</a></li>
-                        <li><a href="#projects" class="smoothscroll">Projects</a></li>
-                        <li><a href="#experience" class="smoothscroll">Experience</a></li>
-                        <li><a href="#about" class="smoothscroll">About</a></li>
-                        <li><a href="#contact" class="smoothscroll">Contact</a></li>
-                        <li><a href="#skills" class="smoothscroll">Skills</a></li>
-                    </ul>
-                </div>
-                <div class="column xl-3 lg-6 md-12 tab-12 s-footer__block s-footer__newsletter">
-                    <h3>Newsletter</h3>
-
-
-
-                    <div class="subscribe-form">
-                        <form id="mc-form" class="mc-form">
-                            <input type="email" name="EMAIL" id="mce-EMAIL" class="u-fullwidth text-center" placeholder="Your Email Address" title="The domain portion of the email address is invalid (the portion after the @)." pattern="^([^\x00-\x20\x22\x28\x29\x2c\x2e\x3a-\x3c\x3e\x40\x5b-\x5d\x7f-\xff]+|\x22([^\x0d\x22\x5c\x80-\xff]|\x5c[\x00-\x7f])*\x22)(\x2e([^\x00-\x20\x22\x28\x29\x2c\x2e\x3a-\x3c\x3e\x40\x5b-\x5d\x7f-\xff]+|\x22([^\x0d\x22\x5c\x80-\xff]|\x5c[\x00-\x7f])*\x22))*\x40([^\x00-\x20\x22\x28\x29\x2c\x2e\x3a-\x3c\x3e\x40\x5b-\x5d\x7f-\xff]+|\x5b([^\x0d\x5b-\x5d\x80-\xff]|\x5c[\x00-\x7f])*\x5d)(\x2e([^\x00-\x20\x22\x28\x29\x2c\x2e\x3a-\x3c\x3e\x40\x5b-\x5d\x7f-\xff]+|\x5b([^\x0d\x5b-\x5d\x80-\xff]|\x5c[\x00-\x7f])*\x5d))*(\.\w{2,})+$" required>
-                            <input type="submit" name="subscribe" value="Subscribe" class="btn btn--primary btn--small u-fullwidth">
-                            <!-- <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text" name="b_cdb7b577e41181934ed6a6a44_9a91cfe7b3" tabindex="-1" value=""></div> -->
-                            <div class="mc-status"></div>
-                        </form>
-                    </div>
-                </div>
-            </div>    
-            
-          
-               
-
-                <div class="ss-go-top">
-                    <a class="smoothscroll" title="Back to Top" href="#top">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#ffffff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">&lt;!--!  Atomicons Free 1.00 by @atisalab License - https://atomicons.com/license/ (Icons: CC BY 4.0) Copyright 2021 Atomicons --&gt;<polyline points="17 11 12 6 7 11"></polyline><line x1="12" y1="18" x2="12" y2="6"></line></svg>
-                    </a>
-                </div> <!-- end ss-go-top -->
-            </div>
-            
-        </footer> <!-- end s-footer -->
-
-    </div> <!-- end page-wrap -->
-
-    <!-- Java Script
-    ================================================== -->
-    <script src="js/plugins.js"></script>
-    <script src="js/main.js"></script>
-
 </body>
 </html>
